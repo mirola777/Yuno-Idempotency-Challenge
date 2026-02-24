@@ -13,7 +13,7 @@ Pure domain models, custom error types, and port interfaces. This layer has **ze
 - `models.go` -- Data structures: `Payment`, `PaymentRequest`, `IdempotencyRecord`, along with enums for `PaymentStatus`, `Currency`, and `IdempotencyStatus`.
 - `errors/base.go` -- `AppError` struct with a `Messages` map for per-language translations, a `Localize(lang)` method that returns a localized copy, and a `newAppError()` constructor.
 - `errors/payment.go` -- Error factory functions. Each factory embeds its own `Messages{"en": "...", "es": "..."}` map with translations.
-- `ports.go` -- Interface definitions: `IdempotencyRepository`, `PaymentRepository`, `PaymentProcessor`, and `PaymentService`.
+- `ports.go` -- Interface definitions: `TransactionManager`, `IdempotencyRepository`, `PaymentRepository`, and `PaymentProcessor`. The domain layer has zero infrastructure imports -- transaction management is abstracted through the `TransactionManager` interface.
 
 ### application/
 
@@ -29,6 +29,7 @@ Use cases and service orchestration. Depends **only on domain** interfaces. Cont
 Secondary adapters that implement domain interfaces. This layer talks to external systems (database, payment processors) but is driven by the domain contracts.
 
 - `gorm/connection.go` -- PostgreSQL connection setup via GORM with connection pool configuration (25 max open, 10 max idle, 5min lifetime). Package name is `gormdb`.
+- `gorm/transaction.go` -- Implements `domain.TransactionManager`. Uses context-based transaction propagation: stores the active `*gorm.DB` transaction in the context via `context.WithValue`, and repositories extract it with `ExtractTx(ctx, fallback)`.
 - `gorm/migrations.go` -- Migration runner that delegates to the `migrations/` subdirectory.
 - `gorm/migrations/` -- Individual schema migration definitions for payments and idempotency records.
 - `gorm/repositories/idempotency_repo.go` -- Implements `domain.IdempotencyRepository` with `SELECT ... FOR UPDATE` locking support.
@@ -73,8 +74,8 @@ In dependency terms:
 presentation --> application --> domain <-- infrastructure
 ```
 
-- **presentation** calls `domain.PaymentService` (implemented by application).
-- **application** calls `domain.IdempotencyRepository`, `domain.PaymentRepository`, and `domain.PaymentProcessor` (implemented by infrastructure).
+- **presentation** calls application use cases directly via the `Container` struct.
+- **application** calls `domain.TransactionManager`, `domain.IdempotencyRepository`, `domain.PaymentRepository`, and `domain.PaymentProcessor` (all implemented by infrastructure).
 - **domain** defines all interfaces; it depends on nothing.
 - **infrastructure** implements domain interfaces; it depends only on domain.
 
@@ -86,11 +87,12 @@ The `container.go` file in `internal/application/use_cases/` serves as the compo
 
 1. Opens the database connection via `gormdb.NewConnection()`.
 2. Runs migrations via `gormdb.RunMigrations()`.
-3. Creates concrete repository implementations (`NewIdempotencyRepo`, `NewPaymentRepo`).
-4. Creates the payment processor simulator (`NewSimulator`).
-5. Creates the use case instances (`CreatePaymentUseCase`, `GetPaymentUseCase`, `GetByIdempotencyKeyUseCase`).
-6. Starts the background cleanup goroutine.
-7. Exposes the assembled use cases through the `Container` struct.
+3. Creates the `TransactionManager` via `gormdb.NewTransactionManager()`.
+4. Creates concrete repository implementations (`NewIdempotencyRepo`, `NewPaymentRepo`).
+5. Creates the payment processor simulator (`NewSimulator`).
+6. Creates the use case instances (`CreatePaymentUseCase`, `GetPaymentUseCase`, `GetByIdempotencyKeyUseCase`).
+7. Starts the background cleanup goroutine.
+8. Exposes the assembled use cases through the `Container` struct.
 
 The `main.go` entry point is fully agnostic -- it has no database imports and only knows about config, container, and server:
 
@@ -106,31 +108,28 @@ The `main.go` entry point is fully agnostic -- it has no database imports and on
 All cross-layer communication happens through interfaces defined in `domain/ports.go`:
 
 ```go
+type TransactionManager interface {
+    RunInTransaction(ctx context.Context, fn func(ctx context.Context) error) error
+}
+
 type IdempotencyRepository interface {
     FindByKey(ctx context.Context, key string) (*IdempotencyRecord, error)
+    FindByKeyForUpdate(ctx context.Context, key string) (*IdempotencyRecord, error)
     Create(ctx context.Context, record *IdempotencyRecord) error
     Update(ctx context.Context, record *IdempotencyRecord) error
     DeleteExpired(ctx context.Context) (int64, error)
-    FindByKeyForUpdate(ctx context.Context, tx *gorm.DB, key string) (*IdempotencyRecord, error)
-    CreateInTx(ctx context.Context, tx *gorm.DB, record *IdempotencyRecord) error
-    UpdateInTx(ctx context.Context, tx *gorm.DB, record *IdempotencyRecord) error
 }
 
 type PaymentRepository interface {
     Create(ctx context.Context, payment *Payment) error
     FindByID(ctx context.Context, id string) (*Payment, error)
-    CreateInTx(ctx context.Context, tx *gorm.DB, payment *Payment) error
 }
 
 type PaymentProcessor interface {
     Process(ctx context.Context, req PaymentRequest) (*Payment, error)
 }
-
-type PaymentService interface {
-    CreatePayment(ctx context.Context, idempotencyKey string, req PaymentRequest) (*Payment, error)
-    GetPayment(ctx context.Context, paymentID string) (*Payment, error)
-    GetByIdempotencyKey(ctx context.Context, key string) (*IdempotencyRecord, error)
-}
 ```
+
+Notice that the domain interfaces contain **no infrastructure types** (no `*gorm.DB`, no ORM-specific parameters). Transaction state is propagated through `context.Context` -- the `TransactionManager` injects a transaction handle into the context, and repositories extract it transparently. This keeps the domain layer completely pure while still supporting transactional operations.
 
 This design allows any layer to be replaced independently -- swap PostgreSQL for DynamoDB, replace the simulator with a real payment gateway, or switch Echo for Gin -- without touching the domain or application logic.

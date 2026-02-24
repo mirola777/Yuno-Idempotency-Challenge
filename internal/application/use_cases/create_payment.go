@@ -8,11 +8,15 @@ import (
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/domain"
 	apperrors "github.com/mirola777/Yuno-Idempotency-Challenge/internal/domain/errors"
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/utils/fingerprint"
-	"gorm.io/gorm"
 )
 
+type CreatePaymentResult struct {
+	Payment  *domain.Payment
+	Replayed bool
+}
+
 type CreatePaymentUseCase struct {
-	db              *gorm.DB
+	txManager       domain.TransactionManager
 	idempotencyRepo domain.IdempotencyRepository
 	paymentRepo     domain.PaymentRepository
 	processor       domain.PaymentProcessor
@@ -20,14 +24,14 @@ type CreatePaymentUseCase struct {
 }
 
 func NewCreatePaymentUseCase(
-	db *gorm.DB,
+	txManager domain.TransactionManager,
 	idempotencyRepo domain.IdempotencyRepository,
 	paymentRepo domain.PaymentRepository,
 	processor domain.PaymentProcessor,
 	keyTTL time.Duration,
 ) *CreatePaymentUseCase {
 	return &CreatePaymentUseCase{
-		db:              db,
+		txManager:       txManager,
 		idempotencyRepo: idempotencyRepo,
 		paymentRepo:     paymentRepo,
 		processor:       processor,
@@ -35,7 +39,7 @@ func NewCreatePaymentUseCase(
 	}
 }
 
-func (uc *CreatePaymentUseCase) Execute(ctx context.Context, idempotencyKey string, req domain.PaymentRequest) (*domain.Payment, error) {
+func (uc *CreatePaymentUseCase) Execute(ctx context.Context, idempotencyKey string, req domain.PaymentRequest) (*CreatePaymentResult, error) {
 	if err := validateIdempotencyKey(idempotencyKey); err != nil {
 		return nil, err
 	}
@@ -46,11 +50,11 @@ func (uc *CreatePaymentUseCase) Execute(ctx context.Context, idempotencyKey stri
 
 	fp := fingerprint.Compute(req)
 
-	var result *domain.Payment
+	var result *CreatePaymentResult
 	var returnErr error
 
-	txErr := uc.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		record, err := uc.idempotencyRepo.FindByKeyForUpdate(ctx, tx, idempotencyKey)
+	txErr := uc.txManager.RunInTransaction(ctx, func(txCtx context.Context) error {
+		record, err := uc.idempotencyRepo.FindByKeyForUpdate(txCtx, idempotencyKey)
 		if err != nil {
 			returnErr = apperrors.ErrInternal()
 			return err
@@ -72,7 +76,7 @@ func (uc *CreatePaymentUseCase) Execute(ctx context.Context, idempotencyKey stri
 				returnErr = apperrors.ErrInternal()
 				return err
 			}
-			result = &cached
+			result = &CreatePaymentResult{Payment: &cached, Replayed: true}
 			return nil
 		}
 
@@ -83,7 +87,7 @@ func (uc *CreatePaymentUseCase) Execute(ctx context.Context, idempotencyKey stri
 			CreatedAt:          time.Now(),
 			ExpiresAt:          time.Now().Add(uc.keyTTL),
 		}
-		if err := uc.idempotencyRepo.CreateInTx(ctx, tx, newRecord); err != nil {
+		if err := uc.idempotencyRepo.Create(txCtx, newRecord); err != nil {
 			returnErr = apperrors.ErrInternal()
 			return err
 		}
@@ -94,7 +98,7 @@ func (uc *CreatePaymentUseCase) Execute(ctx context.Context, idempotencyKey stri
 			return err
 		}
 
-		if err := uc.paymentRepo.CreateInTx(ctx, tx, payment); err != nil {
+		if err := uc.paymentRepo.Create(txCtx, payment); err != nil {
 			returnErr = apperrors.ErrInternal()
 			return err
 		}
@@ -108,12 +112,12 @@ func (uc *CreatePaymentUseCase) Execute(ctx context.Context, idempotencyKey stri
 		newRecord.Status = domain.IdempotencyStatusCompleted
 		newRecord.PaymentID = payment.ID
 		newRecord.ResponseBody = responseBody
-		if err := uc.idempotencyRepo.UpdateInTx(ctx, tx, newRecord); err != nil {
+		if err := uc.idempotencyRepo.Update(txCtx, newRecord); err != nil {
 			returnErr = apperrors.ErrInternal()
 			return err
 		}
 
-		result = payment
+		result = &CreatePaymentResult{Payment: payment, Replayed: false}
 		return nil
 	})
 

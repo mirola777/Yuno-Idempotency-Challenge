@@ -32,7 +32,9 @@ func NewContainer(cfg *config.Config) (*Container, error) {
 	paymentRepo := repositories.NewPaymentRepo(db)
 	paymentProcessor := processor.NewSimulator()
 
-	createPayment := NewCreatePaymentUseCase(db, idempotencyRepo, paymentRepo, paymentProcessor, cfg.IdempotencyKeyTTL)
+	txManager := gormdb.NewTransactionManager(db)
+
+	createPayment := NewCreatePaymentUseCase(txManager, idempotencyRepo, paymentRepo, paymentProcessor, cfg.IdempotencyKeyTTL)
 	getPayment := NewGetPaymentUseCase(paymentRepo)
 	getByIdempotencyKey := NewGetByIdempotencyKeyUseCase(idempotencyRepo)
 

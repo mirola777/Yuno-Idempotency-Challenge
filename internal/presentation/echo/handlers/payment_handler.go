@@ -31,12 +31,16 @@ func (h *PaymentHandler) CreatePayment(c echo.Context) error {
 		return apperrors.ErrInvalidPaymentRequest("invalid request body")
 	}
 
-	payment, err := h.createPayment.Execute(c.Request().Context(), idempotencyKey, req)
+	result, err := h.createPayment.Execute(c.Request().Context(), idempotencyKey, req)
 	if err != nil {
 		return err
 	}
 
-	return c.JSON(http.StatusCreated, payment)
+	if result.Replayed {
+		c.Response().Header().Set("X-Idempotent-Replayed", "true")
+	}
+
+	return c.JSON(http.StatusCreated, result.Payment)
 }
 
 func (h *PaymentHandler) GetPayment(c echo.Context) error {

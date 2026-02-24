@@ -1,1658 +1,1630 @@
 {
-	"info": {
-		"_postman_id": "f0a1b2c3-d4e5-6789-0abc-def123456789",
-		"name": "Yuno Idempotency Challenge",
-		"description": "Comprehensive Postman collection for testing the Yuno Idempotency Challenge API. Covers health checks, successful payments across multiple Southeast Asian currencies (IDR, THB, VND, PHP), failed payments (insufficient funds, expired card, processing error), pending payments, idempotent retries with same key/payload verification, conflict detection with same key/different payload, payment lookups by ID and idempotency key, and validation error handling.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-	},
-	"variable": [
-		{
-			"key": "base_url",
-			"value": "http://localhost:8080"
-		},
-		{
-			"key": "payment_id",
-			"value": ""
-		},
-		{
-			"key": "payment_id_idr_001",
-			"value": ""
-		},
-		{
-			"key": "payment_id_idr_002",
-			"value": ""
-		},
-		{
-			"key": "payment_id_idr_003",
-			"value": ""
-		},
-		{
-			"key": "payment_id_thb_001",
-			"value": ""
-		},
-		{
-			"key": "payment_id_thb_002",
-			"value": ""
-		},
-		{
-			"key": "payment_id_vnd_001",
-			"value": ""
-		},
-		{
-			"key": "payment_id_vnd_002",
-			"value": ""
-		},
-		{
-			"key": "payment_id_php_001",
-			"value": ""
-		},
-		{
-			"key": "payment_id_php_002",
-			"value": ""
-		},
-		{
-			"key": "payment_id_fail_001",
-			"value": ""
-		},
-		{
-			"key": "payment_id_pending_001",
-			"value": ""
-		},
-		{
-			"key": "idempotent_retry_payment_id",
-			"value": ""
-		},
-		{
-			"key": "conflict_first_payment_id",
-			"value": ""
-		}
-	],
-	"item": [
-		{
-			"name": "Health Check",
-			"item": [
-				{
-					"name": "Health Check",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 200', function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Response has status field', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('status');",
-									"});",
-									"",
-									"pm.test('Service status is OK', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('OK');",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/health",
-							"host": ["{{base_url}}"],
-							"path": ["health"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Successful Payments - IDR",
-			"item": [
-				{
-					"name": "IDR Payment - Jakarta Ride 85000",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData.id).to.be.a('string');",
-									"    pm.expect(jsonData.id).to.not.be.empty;",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(85000);",
-									"    pm.expect(jsonData.currency).to.eql('IDR');",
-									"});",
-									"",
-									"pm.test('Response has created_at timestamp', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('created_at');",
-									"});",
-									"",
-									"pm.test('Save payment_id for later use', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_idr_001', jsonData.id);",
-									"    pm.collectionVariables.set('payment_id', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-idr-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 85000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_001\",\n\t\"ride_id\": \"ride_jkt_sudirman_001\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Sudirman to Senayan, Jakarta\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "IDR Payment - Jakarta Ride 125000",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(125000);",
-									"    pm.expect(jsonData.currency).to.eql('IDR');",
-									"});",
-									"",
-									"pm.test('Save payment_id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_idr_002', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-idr-002"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 125000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_002\",\n\t\"ride_id\": \"ride_jkt_thamrin_002\",\n\t\"card_number\": \"5500000000000004\",\n\t\"description\": \"GrabCar ride from Thamrin to Kemang, Jakarta\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "IDR Payment - Bandung Ride 45000",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(45000);",
-									"    pm.expect(jsonData.currency).to.eql('IDR');",
-									"});",
-									"",
-									"pm.test('Save payment_id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_idr_003', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-idr-003"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 45000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_bandung_001\",\n\t\"ride_id\": \"ride_bdg_dago_001\",\n\t\"card_number\": \"4242424242424242\",\n\t\"description\": \"GrabBike ride from Dago to Braga, Bandung\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Successful Payments - THB",
-			"item": [
-				{
-					"name": "THB Payment - Bangkok Ride 350",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(350);",
-									"    pm.expect(jsonData.currency).to.eql('THB');",
-									"});",
-									"",
-									"pm.test('Save payment_id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_thb_001', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-thb-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 350,\n\t\"currency\": \"THB\",\n\t\"customer_id\": \"cust_bangkok_001\",\n\t\"ride_id\": \"ride_bkk_silom_001\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Silom to Sukhumvit, Bangkok\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "THB Payment - Bangkok Ride 180",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(180);",
-									"    pm.expect(jsonData.currency).to.eql('THB');",
-									"});",
-									"",
-									"pm.test('Save payment_id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_thb_002', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-thb-002"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 180,\n\t\"currency\": \"THB\",\n\t\"customer_id\": \"cust_bangkok_002\",\n\t\"ride_id\": \"ride_bkk_siam_002\",\n\t\"card_number\": \"4242424242424242\",\n\t\"description\": \"GrabBike ride from Siam to Chatuchak, Bangkok\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Successful Payments - VND",
-			"item": [
-				{
-					"name": "VND Payment - Ho Chi Minh City Ride 95000",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(95000);",
-									"    pm.expect(jsonData.currency).to.eql('VND');",
-									"});",
-									"",
-									"pm.test('Save payment_id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_vnd_001', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-vnd-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 95000,\n\t\"currency\": \"VND\",\n\t\"customer_id\": \"cust_hcmc_001\",\n\t\"ride_id\": \"ride_hcm_district1_001\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from District 1 to Tan Binh, Ho Chi Minh City\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "VND Payment - Hanoi Ride 150000",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(150000);",
-									"    pm.expect(jsonData.currency).to.eql('VND');",
-									"});",
-									"",
-									"pm.test('Save payment_id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_vnd_002', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-vnd-002"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 150000,\n\t\"currency\": \"VND\",\n\t\"customer_id\": \"cust_hanoi_001\",\n\t\"ride_id\": \"ride_hn_hoankiem_001\",\n\t\"card_number\": \"5500000000000004\",\n\t\"description\": \"GrabCar ride from Hoan Kiem to Cau Giay, Hanoi\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Successful Payments - PHP",
-			"item": [
-				{
-					"name": "PHP Payment - Manila Ride 450",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(450);",
-									"    pm.expect(jsonData.currency).to.eql('PHP');",
-									"});",
-									"",
-									"pm.test('Save payment_id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_php_001', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-php-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 450,\n\t\"currency\": \"PHP\",\n\t\"customer_id\": \"cust_manila_001\",\n\t\"ride_id\": \"ride_mnl_makati_001\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Makati to BGC, Manila\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "PHP Payment - Cebu Ride 275",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(275);",
-									"    pm.expect(jsonData.currency).to.eql('PHP');",
-									"});",
-									"",
-									"pm.test('Save payment_id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_php_002', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-php-002"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 275,\n\t\"currency\": \"PHP\",\n\t\"customer_id\": \"cust_cebu_001\",\n\t\"ride_id\": \"ride_ceb_itmpark_001\",\n\t\"card_number\": \"4242424242424242\",\n\t\"description\": \"GrabCar ride from IT Park to Ayala Center, Cebu\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Failed Payments",
-			"item": [
-				{
-					"name": "Failed - Insufficient Funds (card 4000000000000002)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is FAILED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('FAILED');",
-									"});",
-									"",
-									"pm.test('Fail reason indicates insufficient funds', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('fail_reason');",
-									"    pm.expect(jsonData.fail_reason).to.include('insufficient_funds');",
-									"});",
-									"",
-									"pm.test('Save payment_id for failed payment', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_fail_001', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-fail-insuf-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 50000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_003\",\n\t\"ride_id\": \"ride_jkt_ancol_003\",\n\t\"card_number\": \"4000000000000002\",\n\t\"description\": \"GrabCar ride from Ancol to Monas, Jakarta - insufficient funds\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Failed - Expired Card (card 4000000000000069)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is FAILED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('FAILED');",
-									"});",
-									"",
-									"pm.test('Fail reason indicates expired card', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('fail_reason');",
-									"    pm.expect(jsonData.fail_reason).to.include('expired_card');",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-fail-expired-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 200,\n\t\"currency\": \"THB\",\n\t\"customer_id\": \"cust_bangkok_003\",\n\t\"ride_id\": \"ride_bkk_khaoSan_003\",\n\t\"card_number\": \"4000000000000069\",\n\t\"description\": \"GrabBike ride from Khao San to Chinatown, Bangkok - expired card\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Failed - Processing Error (card 4000000000000119)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is FAILED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('FAILED');",
-									"});",
-									"",
-									"pm.test('Fail reason indicates processing error', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('fail_reason');",
-									"    pm.expect(jsonData.fail_reason).to.include('processing_error');",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-fail-proc-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 80000,\n\t\"currency\": \"VND\",\n\t\"customer_id\": \"cust_hcmc_002\",\n\t\"ride_id\": \"ride_hcm_district7_002\",\n\t\"card_number\": \"4000000000000119\",\n\t\"description\": \"GrabCar ride from District 7 to District 3, Ho Chi Minh City - processing error\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Pending Payments",
-			"item": [
-				{
-					"name": "Pending - PHP Payment Manila 300 (card 4000000000000259)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is PENDING', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('PENDING');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(300);",
-									"    pm.expect(jsonData.currency).to.eql('PHP');",
-									"});",
-									"",
-									"pm.test('Save payment_id for pending payment', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('payment_id_pending_001', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-pending-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 300,\n\t\"currency\": \"PHP\",\n\t\"customer_id\": \"cust_manila_002\",\n\t\"ride_id\": \"ride_mnl_quezon_002\",\n\t\"card_number\": \"4000000000000259\",\n\t\"description\": \"GrabCar ride from Quezon City to Pasig, Manila - pending verification\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Pending - IDR Payment Jakarta 120000 (card 4000000000000259)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is PENDING', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('PENDING');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(120000);",
-									"    pm.expect(jsonData.currency).to.eql('IDR');",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-pending-002"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 120000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_004\",\n\t\"ride_id\": \"ride_jkt_pik_004\",\n\t\"card_number\": \"4000000000000259\",\n\t\"description\": \"GrabCar ride from PIK to Kelapa Gading, Jakarta - pending verification\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Idempotent Retries - Same Key Same Payload",
-			"item": [
-				{
-					"name": "Idempotent Retry 1 of 5 - Initial Request",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created (first request)', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"    pm.expect(jsonData.id).to.be.a('string');",
-									"    pm.expect(jsonData.id).to.not.be.empty;",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(67000);",
-									"    pm.expect(jsonData.currency).to.eql('IDR');",
-									"});",
-									"",
-									"pm.test('Save payment_id for idempotent retry verification', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('idempotent_retry_payment_id', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "idempotent-retry-key-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 67000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_005\",\n\t\"ride_id\": \"ride_jkt_menteng_005\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Menteng to Kuningan, Jakarta\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Idempotent Retry 2 of 5 - First Replay",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 200 OK (idempotent replay)', function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Payment ID matches original request', function () {",
-									"    var jsonData = pm.response.json();",
-									"    var originalId = pm.collectionVariables.get('idempotent_retry_payment_id');",
-									"    pm.expect(jsonData.id).to.eql(originalId);",
-									"});",
-									"",
-									"pm.test('Amount and currency unchanged', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(67000);",
-									"    pm.expect(jsonData.currency).to.eql('IDR');",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "idempotent-retry-key-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 67000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_005\",\n\t\"ride_id\": \"ride_jkt_menteng_005\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Menteng to Kuningan, Jakarta\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Idempotent Retry 3 of 5 - Second Replay",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 200 OK (idempotent replay)', function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Payment ID matches original request', function () {",
-									"    var jsonData = pm.response.json();",
-									"    var originalId = pm.collectionVariables.get('idempotent_retry_payment_id');",
-									"    pm.expect(jsonData.id).to.eql(originalId);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "idempotent-retry-key-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 67000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_005\",\n\t\"ride_id\": \"ride_jkt_menteng_005\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Menteng to Kuningan, Jakarta\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Idempotent Retry 4 of 5 - Third Replay",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 200 OK (idempotent replay)', function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Payment ID matches original request', function () {",
-									"    var jsonData = pm.response.json();",
-									"    var originalId = pm.collectionVariables.get('idempotent_retry_payment_id');",
-									"    pm.expect(jsonData.id).to.eql(originalId);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "idempotent-retry-key-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 67000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_005\",\n\t\"ride_id\": \"ride_jkt_menteng_005\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Menteng to Kuningan, Jakarta\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Idempotent Retry 5 of 5 - Fourth Replay",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 200 OK (idempotent replay)', function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Payment ID matches original request (final verification)', function () {",
-									"    var jsonData = pm.response.json();",
-									"    var originalId = pm.collectionVariables.get('idempotent_retry_payment_id');",
-									"    pm.expect(jsonData.id).to.eql(originalId);",
-									"});",
-									"",
-									"pm.test('All 5 requests returned same payment ID', function () {",
-									"    var jsonData = pm.response.json();",
-									"    var originalId = pm.collectionVariables.get('idempotent_retry_payment_id');",
-									"    pm.expect(jsonData.id).to.eql(originalId);",
-									"    pm.expect(originalId).to.not.be.empty;",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "idempotent-retry-key-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 67000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_005\",\n\t\"ride_id\": \"ride_jkt_menteng_005\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Menteng to Kuningan, Jakarta\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Conflict Detection",
-			"item": [
-				{
-					"name": "Conflict - First Request (key conflict-test-key-001, amount 50000)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 201 Created', function () {",
-									"    pm.response.to.have.status(201);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Payment status is SUCCEEDED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
-									"});",
-									"",
-									"pm.test('Response has correct amount', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.amount).to.eql(50000);",
-									"});",
-									"",
-									"pm.test('Save payment_id for conflict verification', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.collectionVariables.set('conflict_first_payment_id', jsonData.id);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "conflict-test-key-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 50000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_006\",\n\t\"ride_id\": \"ride_jkt_tebet_006\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Tebet to Cikini, Jakarta\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Conflict - Same Key Different Amount (key conflict-test-key-001, amount 75000) - Expect 409",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 409 Conflict', function () {",
-									"    pm.response.to.have.status(409);",
-									"});",
-									"",
-									"pm.test('Response has error information', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('code');",
-									"});",
-									"",
-									"pm.test('Error code is IDEMPOTENCY_KEY_CONFLICT', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.code).to.eql('IDEMPOTENCY_KEY_CONFLICT');",
-									"});",
-									"",
-									"pm.test('Response has error message explaining the conflict', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('message');",
-									"    pm.expect(jsonData.message).to.be.a('string');",
-									"    pm.expect(jsonData.message).to.not.be.empty;",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "conflict-test-key-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 75000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_jakarta_006\",\n\t\"ride_id\": \"ride_jkt_tebet_006\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"GrabCar ride from Tebet to Cikini, Jakarta - DIFFERENT AMOUNT\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Payment Lookup",
-			"item": [
-				{
-					"name": "Get Payment by ID",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 200 OK', function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Response has payment id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('id');",
-									"});",
-									"",
-									"pm.test('Response has status field', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('status');",
-									"});",
-									"",
-									"pm.test('Response has amount and currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('amount');",
-									"    pm.expect(jsonData).to.have.property('currency');",
-									"});",
-									"",
-									"pm.test('Response has customer_id and ride_id', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('customer_id');",
-									"    pm.expect(jsonData).to.have.property('ride_id');",
-									"});",
-									"",
-									"pm.test('Response has created_at timestamp', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('created_at');",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/v1/payments/{{payment_id}}",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments", "{{payment_id}}"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Get Idempotency Record by Key",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 200 OK', function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Response has idempotency key', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('key');",
-									"    pm.expect(jsonData.key).to.eql('ride-pay-idr-001');",
-									"});",
-									"",
-									"pm.test('Idempotency record status is COMPLETED', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.status).to.eql('COMPLETED');",
-									"});",
-									"",
-									"pm.test('Response has payment_id reference', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('payment_id');",
-									"});",
-									"",
-									"pm.test('Payment ID matches the stored value', function () {",
-									"    var jsonData = pm.response.json();",
-									"    var storedId = pm.collectionVariables.get('payment_id_idr_001');",
-									"    pm.expect(jsonData.payment_id).to.eql(storedId);",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [],
-						"url": {
-							"raw": "{{base_url}}/v1/idempotency/ride-pay-idr-001",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "idempotency", "ride-pay-idr-001"]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "Validation Errors",
-			"item": [
-				{
-					"name": "Validation Error - Missing Idempotency Key Header",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 400 Bad Request', function () {",
-									"    pm.response.to.have.status(400);",
-									"});",
-									"",
-									"pm.test('Response has error code', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('code');",
-									"});",
-									"",
-									"pm.test('Error code is IDEMPOTENCY_KEY_MISSING', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.code).to.eql('IDEMPOTENCY_KEY_MISSING');",
-									"});",
-									"",
-									"pm.test('Response has error message', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('message');",
-									"    pm.expect(jsonData.message).to.be.a('string');",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 50000,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_validation_001\",\n\t\"ride_id\": \"ride_val_nokey_001\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"Ride payment missing idempotency key header\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Validation Error - Zero Amount",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 400 Bad Request', function () {",
-									"    pm.response.to.have.status(400);",
-									"});",
-									"",
-									"pm.test('Response has error code', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('code');",
-									"});",
-									"",
-									"pm.test('Response has error message about invalid amount', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('message');",
-									"    pm.expect(jsonData.message).to.be.a('string');",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-val-zero-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 0,\n\t\"currency\": \"IDR\",\n\t\"customer_id\": \"cust_validation_002\",\n\t\"ride_id\": \"ride_val_zero_002\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"Ride payment with zero amount - should be rejected\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "Validation Error - Invalid Currency USD",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"pm.test('Status code is 400 Bad Request', function () {",
-									"    pm.response.to.have.status(400);",
-									"});",
-									"",
-									"pm.test('Response has error code', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('code');",
-									"});",
-									"",
-									"pm.test('Response has error message about invalid currency', function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData).to.have.property('message');",
-									"    pm.expect(jsonData.message).to.be.a('string');",
-									"});"
-								]
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json"
-							},
-							{
-								"key": "X-Idempotency-Key",
-								"value": "ride-pay-val-currency-001"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n\t\"amount\": 25000,\n\t\"currency\": \"USD\",\n\t\"customer_id\": \"cust_validation_003\",\n\t\"ride_id\": \"ride_val_usd_003\",\n\t\"card_number\": \"4111111111111111\",\n\t\"description\": \"Ride payment with unsupported currency USD - should be rejected\"\n}"
-						},
-						"url": {
-							"raw": "{{base_url}}/v1/payments",
-							"host": ["{{base_url}}"],
-							"path": ["v1", "payments"]
-						}
-					},
-					"response": []
-				}
-			]
-		}
-	]
+  "info": {
+    "_postman_id": "f0a1b2c3-d4e5-6789-0abc-def123456789",
+    "name": "Yuno Idempotency Challenge",
+    "description": "Comprehensive Postman collection for testing the Yuno Idempotency Challenge API. Covers health checks, successful payments across multiple Southeast Asian currencies (IDR, THB, VND, PHP), failed payments (insufficient funds, expired card, processing error), pending payments, idempotent retries with same key/payload verification, conflict detection with same key/different payload, payment lookups by ID and idempotency key, and validation error handling.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "payment_id",
+      "value": ""
+    },
+    {
+      "key": "payment_id_idr_001",
+      "value": ""
+    },
+    {
+      "key": "payment_id_idr_002",
+      "value": ""
+    },
+    {
+      "key": "payment_id_idr_003",
+      "value": ""
+    },
+    {
+      "key": "payment_id_thb_001",
+      "value": ""
+    },
+    {
+      "key": "payment_id_thb_002",
+      "value": ""
+    },
+    {
+      "key": "payment_id_vnd_001",
+      "value": ""
+    },
+    {
+      "key": "payment_id_vnd_002",
+      "value": ""
+    },
+    {
+      "key": "payment_id_php_001",
+      "value": ""
+    },
+    {
+      "key": "payment_id_php_002",
+      "value": ""
+    },
+    {
+      "key": "payment_id_fail_001",
+      "value": ""
+    },
+    {
+      "key": "payment_id_pending_001",
+      "value": ""
+    },
+    {
+      "key": "idempotent_retry_payment_id",
+      "value": ""
+    },
+    {
+      "key": "conflict_first_payment_id",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "Health Check",
+      "item": [
+        {
+          "name": "GET /health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has status field', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "});",
+                  "",
+                  "pm.test('Status is OK', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('OK');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Successful Payments - IDR",
+      "item": [
+        {
+          "name": "Pay IDR 85000 - Sudirman to Kemang",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('amount');",
+                  "    pm.expect(jsonData).to.have.property('currency');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('card_last_4');",
+                  "});",
+                  "",
+                  "pm.test('Payment status is SUCCEEDED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id', jsonData.id);",
+                  "    pm.collectionVariables.set('payment_id_idr_001', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-idr-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 85000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_001\",\n  \"ride_id\": \"ride_jkt_001\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Ride from Sudirman to Kemang\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pay IDR 125000 - Airport Transfer",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('amount');",
+                  "    pm.expect(jsonData).to.have.property('currency');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('card_last_4');",
+                  "});",
+                  "",
+                  "pm.test('Payment status is SUCCEEDED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id', jsonData.id);",
+                  "    pm.collectionVariables.set('payment_id_idr_002', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-idr-002"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 125000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_002\",\n  \"ride_id\": \"ride_jkt_002\",\n  \"card_number\": \"5500000000000004\",\n  \"description\": \"Airport transfer Soekarno-Hatta\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pay IDR 45000 - Dago to Pasteur",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('amount');",
+                  "    pm.expect(jsonData).to.have.property('currency');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('card_last_4');",
+                  "});",
+                  "",
+                  "pm.test('Payment status is SUCCEEDED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id', jsonData.id);",
+                  "    pm.collectionVariables.set('payment_id_idr_003', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-idr-003"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 45000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_bandung_001\",\n  \"ride_id\": \"ride_bdg_001\",\n  \"card_number\": \"4242424242424242\",\n  \"description\": \"Ride from Dago to Pasteur\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Successful Payments - THB",
+      "item": [
+        {
+          "name": "Pay THB 350 - Silom to Chatuchak",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('amount');",
+                  "    pm.expect(jsonData).to.have.property('currency');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('card_last_4');",
+                  "});",
+                  "",
+                  "pm.test('Payment status is SUCCEEDED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id', jsonData.id);",
+                  "    pm.collectionVariables.set('payment_id_thb_001', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-thb-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 350,\n  \"currency\": \"THB\",\n  \"customer_id\": \"cust_bangkok_001\",\n  \"ride_id\": \"ride_bkk_001\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Ride from Silom to Chatuchak\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pay THB 180 - Siam to Asok",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('amount');",
+                  "    pm.expect(jsonData).to.have.property('currency');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('card_last_4');",
+                  "});",
+                  "",
+                  "pm.test('Payment status is SUCCEEDED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id', jsonData.id);",
+                  "    pm.collectionVariables.set('payment_id_thb_002', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-thb-002"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 180,\n  \"currency\": \"THB\",\n  \"customer_id\": \"cust_bangkok_002\",\n  \"ride_id\": \"ride_bkk_002\",\n  \"card_number\": \"4242424242424242\",\n  \"description\": \"Ride from Siam to Asok\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Successful Payments - VND",
+      "item": [
+        {
+          "name": "Pay VND 95000 - District 1 to Tan Son Nhat",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('amount');",
+                  "    pm.expect(jsonData).to.have.property('currency');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('card_last_4');",
+                  "});",
+                  "",
+                  "pm.test('Payment status is SUCCEEDED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id', jsonData.id);",
+                  "    pm.collectionVariables.set('payment_id_vnd_001', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-vnd-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 95000,\n  \"currency\": \"VND\",\n  \"customer_id\": \"cust_hcmc_001\",\n  \"ride_id\": \"ride_hcmc_001\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Ride from District 1 to Tan Son Nhat\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pay VND 150000 - Hoan Kiem to Noi Bai",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('amount');",
+                  "    pm.expect(jsonData).to.have.property('currency');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('card_last_4');",
+                  "});",
+                  "",
+                  "pm.test('Payment status is SUCCEEDED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id', jsonData.id);",
+                  "    pm.collectionVariables.set('payment_id_vnd_002', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-vnd-002"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 150000,\n  \"currency\": \"VND\",\n  \"customer_id\": \"cust_hanoi_001\",\n  \"ride_id\": \"ride_hn_001\",\n  \"card_number\": \"5500000000000004\",\n  \"description\": \"Ride from Hoan Kiem to Noi Bai\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Successful Payments - PHP",
+      "item": [
+        {
+          "name": "Pay PHP 450 - Makati to BGC",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('amount');",
+                  "    pm.expect(jsonData).to.have.property('currency');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('card_last_4');",
+                  "});",
+                  "",
+                  "pm.test('Payment status is SUCCEEDED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id', jsonData.id);",
+                  "    pm.collectionVariables.set('payment_id_php_001', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-php-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 450,\n  \"currency\": \"PHP\",\n  \"customer_id\": \"cust_manila_001\",\n  \"ride_id\": \"ride_mnl_001\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Ride from Makati to BGC\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pay PHP 275 - IT Park to Ayala",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response has required fields', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData).to.have.property('id');",
+                  "    pm.expect(jsonData).to.have.property('amount');",
+                  "    pm.expect(jsonData).to.have.property('currency');",
+                  "    pm.expect(jsonData).to.have.property('status');",
+                  "    pm.expect(jsonData).to.have.property('card_last_4');",
+                  "});",
+                  "",
+                  "pm.test('Payment status is SUCCEEDED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('SUCCEEDED');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id', jsonData.id);",
+                  "    pm.collectionVariables.set('payment_id_php_002', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-php-002"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 275,\n  \"currency\": \"PHP\",\n  \"customer_id\": \"cust_cebu_001\",\n  \"ride_id\": \"ride_ceb_001\",\n  \"card_number\": \"4242424242424242\",\n  \"description\": \"Ride from IT Park to Ayala\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Failed Payments",
+      "item": [
+        {
+          "name": "Fail - Insufficient Funds",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Payment status is FAILED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('FAILED');",
+                  "});",
+                  "",
+                  "pm.test('Fail reason is insufficient_funds', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.fail_reason).to.eql('insufficient_funds');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id_fail_001', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-fail-insufficient"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_003\",\n  \"ride_id\": \"ride_jkt_003\",\n  \"card_number\": \"4000000000000002\",\n  \"description\": \"Failed payment - insufficient funds\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Fail - Expired Card",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Payment status is FAILED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('FAILED');",
+                  "});",
+                  "",
+                  "pm.test('Fail reason is expired_card', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.fail_reason).to.eql('expired_card');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-fail-expired"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 320,\n  \"currency\": \"THB\",\n  \"customer_id\": \"cust_bangkok_003\",\n  \"ride_id\": \"ride_bkk_003\",\n  \"card_number\": \"4000000000000069\",\n  \"description\": \"Failed payment - expired card\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Fail - Processing Error",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Payment status is FAILED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('FAILED');",
+                  "});",
+                  "",
+                  "pm.test('Fail reason is processing_error', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.fail_reason).to.eql('processing_error');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-fail-processing"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 180000,\n  \"currency\": \"VND\",\n  \"customer_id\": \"cust_hcmc_002\",\n  \"ride_id\": \"ride_hcmc_002\",\n  \"card_number\": \"4000000000000119\",\n  \"description\": \"Failed payment - processing error\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Pending Payments",
+      "item": [
+        {
+          "name": "Pending Payment - PHP 300",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Payment status is PENDING', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('PENDING');",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('payment_id_pending_001', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-pending-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 300,\n  \"currency\": \"PHP\",\n  \"customer_id\": \"cust_manila_002\",\n  \"ride_id\": \"ride_mnl_002\",\n  \"card_number\": \"4000000000000259\",\n  \"description\": \"Pending payment - PHP\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Pending Payment - IDR 120000",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Payment status is PENDING', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('PENDING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-pending-002"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 120000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_004\",\n  \"ride_id\": \"ride_jkt_004\",\n  \"card_number\": \"4000000000000259\",\n  \"description\": \"Pending payment - IDR\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Idempotent Retries",
+      "item": [
+        {
+          "name": "First Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Save payment_id as idempotent_retry_payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('idempotent_retry_payment_id', jsonData.id);",
+                  "});",
+                  "",
+                  "pm.test('No X-Idempotent-Replayed header on first request', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Idempotent-Replayed')).to.be.undefined;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "idempotent-retry-key-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 67000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_005\",\n  \"ride_id\": \"ride_jkt_005\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Idempotent retry test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Retry 2",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response id equals saved idempotent_retry_payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var savedId = pm.collectionVariables.get('idempotent_retry_payment_id');",
+                  "    pm.expect(jsonData.id).to.eql(savedId);",
+                  "});",
+                  "",
+                  "pm.test('X-Idempotent-Replayed header is true', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Idempotent-Replayed')).to.eql('true');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "idempotent-retry-key-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 67000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_005\",\n  \"ride_id\": \"ride_jkt_005\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Idempotent retry test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Retry 3",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response id equals saved idempotent_retry_payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var savedId = pm.collectionVariables.get('idempotent_retry_payment_id');",
+                  "    pm.expect(jsonData.id).to.eql(savedId);",
+                  "});",
+                  "",
+                  "pm.test('X-Idempotent-Replayed header is true', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Idempotent-Replayed')).to.eql('true');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "idempotent-retry-key-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 67000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_005\",\n  \"ride_id\": \"ride_jkt_005\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Idempotent retry test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Retry 4",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response id equals saved idempotent_retry_payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var savedId = pm.collectionVariables.get('idempotent_retry_payment_id');",
+                  "    pm.expect(jsonData.id).to.eql(savedId);",
+                  "});",
+                  "",
+                  "pm.test('X-Idempotent-Replayed header is true', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Idempotent-Replayed')).to.eql('true');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "idempotent-retry-key-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 67000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_005\",\n  \"ride_id\": \"ride_jkt_005\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Idempotent retry test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Retry 5",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Response id equals saved idempotent_retry_payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var savedId = pm.collectionVariables.get('idempotent_retry_payment_id');",
+                  "    pm.expect(jsonData.id).to.eql(savedId);",
+                  "});",
+                  "",
+                  "pm.test('X-Idempotent-Replayed header is true', function () {",
+                  "    pm.expect(pm.response.headers.get('X-Idempotent-Replayed')).to.eql('true');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "idempotent-retry-key-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 67000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_005\",\n  \"ride_id\": \"ride_jkt_005\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Idempotent retry test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Conflict Detection",
+      "item": [
+        {
+          "name": "First Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 201', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Save conflict_first_payment_id', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.collectionVariables.set('conflict_first_payment_id', jsonData.id);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "conflict-test-key-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_006\",\n  \"ride_id\": \"ride_jkt_006\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Conflict detection - first request\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Conflicting Request",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 409', function () {",
+                  "    pm.response.to.have.status(409);",
+                  "});",
+                  "",
+                  "pm.test('Error code is IDEMPOTENCY_KEY_CONFLICT', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.code).to.eql('IDEMPOTENCY_KEY_CONFLICT');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "conflict-test-key-001"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 75000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_jakarta_006\",\n  \"ride_id\": \"ride_jkt_006\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Conflict detection - conflicting request with different amount\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payment Lookup",
+      "item": [
+        {
+          "name": "GET Payment by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Response id matches payment_id_idr_001', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    var expectedId = pm.collectionVariables.get('payment_id_idr_001');",
+                  "    pm.expect(jsonData.id).to.eql(expectedId);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/payments/{{payment_id_idr_001}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments",
+                "{{payment_id_idr_001}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "GET Idempotency Key Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Key matches ride-pay-idr-001', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.key).to.eql('ride-pay-idr-001');",
+                  "});",
+                  "",
+                  "pm.test('Status is COMPLETED', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.status).to.eql('COMPLETED');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/v1/idempotency/ride-pay-idr-001",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "idempotency",
+                "ride-pay-idr-001"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Validation Errors",
+      "item": [
+        {
+          "name": "Missing Idempotency Key",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error code is IDEMPOTENCY_KEY_MISSING', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.code).to.eql('IDEMPOTENCY_KEY_MISSING');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_test_001\",\n  \"ride_id\": \"ride_test_001\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Missing idempotency key test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Amount - Zero",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error code is INVALID_PAYMENT_REQUEST', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.code).to.eql('INVALID_PAYMENT_REQUEST');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-invalid-amount"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 0,\n  \"currency\": \"IDR\",\n  \"customer_id\": \"cust_test_002\",\n  \"ride_id\": \"ride_test_002\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Invalid amount test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Invalid Currency - USD",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "packages": {},
+                "exec": [
+                  "pm.test('Status code is 400', function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "",
+                  "pm.test('Error code is INVALID_CURRENCY', function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.code).to.eql('INVALID_CURRENCY');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "X-Idempotency-Key",
+                "value": "ride-pay-invalid-currency"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 50000,\n  \"currency\": \"USD\",\n  \"customer_id\": \"cust_test_003\",\n  \"ride_id\": \"ride_test_003\",\n  \"card_number\": \"4111111111111111\",\n  \"description\": \"Invalid currency test\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/v1/payments",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "v1",
+                "payments"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
 }

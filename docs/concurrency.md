@@ -22,15 +22,17 @@ This project uses **PostgreSQL row-level locking** via `SELECT ... FOR UPDATE` w
 The locking is implemented in the `FindByKeyForUpdate` repository method:
 
 ```go
-func (r *IdempotencyRepo) FindByKeyForUpdate(ctx context.Context, tx *gorm.DB, key string) (*IdempotencyRecord, error) {
+func (r *IdempotencyRepo) FindByKeyForUpdate(ctx context.Context, key string) (*IdempotencyRecord, error) {
     var record domain.IdempotencyRecord
-    err := tx.WithContext(ctx).
+    err := r.conn(ctx).
         Clauses(clause.Locking{Strength: "UPDATE"}).
         Where("key = ? AND expires_at > ?", key, time.Now()).
         First(&record).Error
     // ...
 }
 ```
+
+The `conn(ctx)` method transparently extracts the active transaction from the context (injected by `TransactionManager.RunInTransaction`), falling back to the default database connection when no transaction is active. This approach keeps the repository interface free of infrastructure types while maintaining full transactional support.
 
 This translates to the SQL:
 
@@ -48,11 +50,11 @@ When a `POST /v1/payments` request arrives, the service executes the following s
 
 ### Step 1: Begin Transaction
 
-A GORM transaction is opened with `db.Transaction(func(tx *gorm.DB) error { ... })`. All subsequent database operations use this transaction handle.
+A transaction is opened via `TransactionManager.RunInTransaction(ctx, func(txCtx context.Context) error { ... })`. The transaction handle is stored inside the context, and all subsequent repository calls automatically use it.
 
 ### Step 2: SELECT ... FOR UPDATE
 
-The service calls `FindByKeyForUpdate(ctx, tx, idempotencyKey)`. This query does two things:
+The service calls `FindByKeyForUpdate(txCtx, idempotencyKey)`. This query does two things:
 - Looks up the idempotency record by key.
 - Acquires a **row-level exclusive lock** if the record exists.
 

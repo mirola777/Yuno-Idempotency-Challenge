@@ -7,9 +7,11 @@ All endpoints return JSON. Error responses follow a consistent structure:
 ```json
 {
   "code": "ERROR_CODE",
-  "messages": ["human-readable error description"]
+  "message": "human-readable error description"
 }
 ```
+
+Error messages support localization via the `Accept-Language` header. Supported languages: `en` (default), `es`.
 
 A `X-Trace-Id` header is returned on every response. If the client sends an `X-Trace-Id` header, it is echoed back; otherwise, the server generates a UUID v4.
 
@@ -50,9 +52,16 @@ Create a new payment. This endpoint is idempotency-protected.
 }
 ```
 
+### Response Headers
+
+| Header                    | Description                                                    |
+|---------------------------|----------------------------------------------------------------|
+| `X-Idempotent-Replayed`  | Set to `true` when the response is a cached replay of a previous request with the same idempotency key. Absent on the first (original) request. |
+| `X-Trace-Id`             | Unique trace identifier for the request.                       |
+
 ### Response 201 Created
 
-Returned when the payment is successfully created, or when a duplicate request with the same idempotency key and identical payload is received (cached response).
+Returned when the payment is successfully created, or when a duplicate request with the same idempotency key and identical payload is received (cached response). On replayed responses, the `X-Idempotent-Replayed: true` header is included.
 
 ```json
 {

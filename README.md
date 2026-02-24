@@ -150,7 +150,7 @@ See [docs/api.md](docs/api.md) for full reference with examples.
 2. Service computes SHA256 fingerprint of the request payload
 3. Within a PostgreSQL transaction with SELECT FOR UPDATE:
    - First request: processes payment, stores result, returns 201
-   - Duplicate request (same key + same payload): returns cached response
+   - Duplicate request (same key + same payload): returns cached response with `X-Idempotent-Replayed: true` header
    - Conflicting request (same key + different payload): returns 409
 4. Concurrent requests with the same key are serialized via row-level locking
 
@@ -264,10 +264,11 @@ internal/
     errors/
       base.go             AppError with Messages map and Localize(lang)
       payment.go          Error factories with embedded translations
-    ports.go              Repository, Processor interfaces
+    ports.go              TransactionManager, Repository, Processor interfaces
   infrastructure/
     gorm/
       connection.go       GORM PostgreSQL setup (package gormdb)
+      transaction.go      TransactionManager with context-based tx propagation
       migrations.go       Migration runner
       migrations/         Schema migration definitions
       repositories/       IdempotencyRepo, PaymentRepo

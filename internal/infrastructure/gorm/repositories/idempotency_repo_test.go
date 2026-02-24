@@ -160,7 +160,8 @@ func TestFindByKeyForUpdate(t *testing.T) {
 	tx := db.Begin()
 	require.NoError(t, tx.Error)
 
-	found, err := repo.FindByKeyForUpdate(ctx, tx, "for-update-key")
+	txCtx := gormdb.WithTx(ctx, tx)
+	found, err := repo.FindByKeyForUpdate(txCtx, "for-update-key")
 	require.NoError(t, err)
 	require.NotNil(t, found)
 	assert.Equal(t, "for-update-key", found.Key)
@@ -169,7 +170,7 @@ func TestFindByKeyForUpdate(t *testing.T) {
 	tx.Commit()
 }
 
-func TestCreateInTx(t *testing.T) {
+func TestCreateInTransaction(t *testing.T) {
 	repo, db := setupIdempotencyTest(t)
 	ctx := context.Background()
 
@@ -184,7 +185,8 @@ func TestCreateInTx(t *testing.T) {
 		ExpiresAt:          time.Now().Add(24 * time.Hour),
 	}
 
-	err := repo.CreateInTx(ctx, tx, record)
+	txCtx := gormdb.WithTx(ctx, tx)
+	err := repo.Create(txCtx, record)
 	require.NoError(t, err)
 
 	err = tx.Commit().Error
@@ -197,7 +199,7 @@ func TestCreateInTx(t *testing.T) {
 	assert.Equal(t, domain.IdempotencyStatusProcessing, found.Status)
 }
 
-func TestUpdateInTx(t *testing.T) {
+func TestUpdateInTransaction(t *testing.T) {
 	repo, db := setupIdempotencyTest(t)
 	ctx := context.Background()
 
@@ -219,7 +221,8 @@ func TestUpdateInTx(t *testing.T) {
 	record.PaymentID = "pay-tx-updated"
 	record.ResponseBody = []byte(`{"id":"pay-tx-updated"}`)
 
-	err = repo.UpdateInTx(ctx, tx, record)
+	txCtx := gormdb.WithTx(ctx, tx)
+	err = repo.Update(txCtx, record)
 	require.NoError(t, err)
 
 	err = tx.Commit().Error

@@ -61,7 +61,7 @@ func TestPaymentFindByID_NotFound(t *testing.T) {
 	assert.Nil(t, found)
 }
 
-func TestPaymentCreateInTx(t *testing.T) {
+func TestPaymentCreateInTransaction(t *testing.T) {
 	repo, db := setupPaymentTest(t)
 	ctx := context.Background()
 
@@ -79,7 +79,8 @@ func TestPaymentCreateInTx(t *testing.T) {
 		CreatedAt:  time.Now(),
 	}
 
-	err := repo.CreateInTx(ctx, tx, payment)
+	txCtx := gormdb.WithTx(ctx, tx)
+	err := repo.Create(txCtx, payment)
 	require.NoError(t, err)
 
 	err = tx.Commit().Error
