@@ -7,7 +7,16 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type Environment string
+
+const (
+	EnvTest        Environment = "test"
+	EnvDevelopment Environment = "dev"
+	EnvProduction  Environment = "prod"
+)
+
 type Config struct {
+	AppEnv           Environment
 	AppPort          string
 	DBHost           string
 	DBPort           string
@@ -20,10 +29,23 @@ type Config struct {
 	GracefulTimeout  time.Duration
 }
 
+func (c *Config) IsDev() bool {
+	return c.AppEnv == EnvDevelopment
+}
+
+func (c *Config) IsProd() bool {
+	return c.AppEnv == EnvProduction
+}
+
+func (c *Config) IsTest() bool {
+	return c.AppEnv == EnvTest
+}
+
 func Load() *Config {
 	_ = godotenv.Load()
 
 	return &Config{
+		AppEnv:           parseEnv(getEnv("APP_ENV", "dev")),
 		AppPort:          getEnv("APP_PORT", "8080"),
 		DBHost:           getEnv("DB_HOST", "localhost"),
 		DBPort:           getEnv("DB_PORT", "5432"),
@@ -59,4 +81,15 @@ func parseDuration(value string, fallback time.Duration) time.Duration {
 		return fallback
 	}
 	return d
+}
+
+func parseEnv(value string) Environment {
+	switch value {
+	case "prod", "production":
+		return EnvProduction
+	case "test":
+		return EnvTest
+	default:
+		return EnvDevelopment
+	}
 }

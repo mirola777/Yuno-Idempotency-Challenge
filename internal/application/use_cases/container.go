@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/domain"
-	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/infrastructure/database/repositories"
+	gormdb "github.com/mirola777/Yuno-Idempotency-Challenge/internal/infrastructure/gorm"
+	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/infrastructure/gorm/repositories"
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/infrastructure/processor"
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/utils/config"
-	"gorm.io/gorm"
 )
 
 type Container struct {
@@ -18,7 +18,16 @@ type Container struct {
 	GetByIdempotencyKey *GetByIdempotencyKeyUseCase
 }
 
-func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
+func NewContainer(cfg *config.Config) (*Container, error) {
+	db, err := gormdb.NewConnection(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := gormdb.RunMigrations(db); err != nil {
+		return nil, err
+	}
+
 	idempotencyRepo := repositories.NewIdempotencyRepo(db)
 	paymentRepo := repositories.NewPaymentRepo(db)
 	paymentProcessor := processor.NewSimulator()
@@ -33,7 +42,7 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 		CreatePayment:       createPayment,
 		GetPayment:          getPayment,
 		GetByIdempotencyKey: getByIdempotencyKey,
-	}
+	}, nil
 }
 
 func startCleanupLoop(repo domain.IdempotencyRepository, interval time.Duration) {

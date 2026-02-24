@@ -11,7 +11,7 @@ import (
 func clearEnvVars(t *testing.T) {
 	t.Helper()
 	vars := []string{
-		"APP_PORT", "DB_HOST", "DB_PORT", "DB_USER",
+		"APP_ENV", "APP_PORT", "DB_HOST", "DB_PORT", "DB_USER",
 		"DB_PASSWORD", "DB_NAME", "DB_SSLMODE",
 		"IDEMPOTENCY_KEY_TTL", "CLEANUP_INTERVAL", "GRACEFUL_TIMEOUT",
 	}
@@ -25,6 +25,7 @@ func TestLoad_DefaultValues(t *testing.T) {
 
 	cfg := Load()
 
+	assert.Equal(t, EnvDevelopment, cfg.AppEnv)
 	assert.Equal(t, "8080", cfg.AppPort)
 	assert.Equal(t, "localhost", cfg.DBHost)
 	assert.Equal(t, "5432", cfg.DBPort)
@@ -75,4 +76,51 @@ func TestParseDuration_InvalidFallback(t *testing.T) {
 	d := parseDuration("not-a-duration", 5*time.Second)
 
 	assert.Equal(t, 5*time.Second, d)
+}
+
+func TestParseEnv(t *testing.T) {
+	tests := []struct {
+		input    string
+		expected Environment
+	}{
+		{"dev", EnvDevelopment},
+		{"development", EnvDevelopment},
+		{"prod", EnvProduction},
+		{"production", EnvProduction},
+		{"test", EnvTest},
+		{"unknown", EnvDevelopment},
+		{"", EnvDevelopment},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.input, func(t *testing.T) {
+			assert.Equal(t, tt.expected, parseEnv(tt.input))
+		})
+	}
+}
+
+func TestConfig_EnvironmentHelpers(t *testing.T) {
+	devCfg := &Config{AppEnv: EnvDevelopment}
+	assert.True(t, devCfg.IsDev())
+	assert.False(t, devCfg.IsProd())
+	assert.False(t, devCfg.IsTest())
+
+	prodCfg := &Config{AppEnv: EnvProduction}
+	assert.False(t, prodCfg.IsDev())
+	assert.True(t, prodCfg.IsProd())
+	assert.False(t, prodCfg.IsTest())
+
+	testCfg := &Config{AppEnv: EnvTest}
+	assert.False(t, testCfg.IsDev())
+	assert.False(t, testCfg.IsProd())
+	assert.True(t, testCfg.IsTest())
+}
+
+func TestLoad_AppEnvFromEnvVar(t *testing.T) {
+	clearEnvVars(t)
+	t.Setenv("APP_ENV", "prod")
+
+	cfg := Load()
+
+	assert.Equal(t, EnvProduction, cfg.AppEnv)
 }

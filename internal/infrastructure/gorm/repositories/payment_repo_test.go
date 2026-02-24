@@ -6,14 +6,14 @@ import (
 	"time"
 
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/domain"
-	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/infrastructure/database"
+	gormdb "github.com/mirola777/Yuno-Idempotency-Challenge/internal/infrastructure/gorm"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"gorm.io/gorm"
 )
 
 func setupPaymentTest(t *testing.T) (*PaymentRepo, *gorm.DB) {
-	db, err := database.NewTestConnection()
+	db, err := gormdb.NewTestConnection()
 	require.NoError(t, err)
 	repo := &PaymentRepo{db: db}
 	return repo, db

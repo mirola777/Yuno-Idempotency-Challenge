@@ -6,37 +6,64 @@ import (
 )
 
 func ErrIdempotencyKeyMissing() *AppError {
-	return New("IDEMPOTENCY_KEY_MISSING", http.StatusBadRequest, messages["en"]["IDEMPOTENCY_KEY_MISSING"])
+	return newAppError("IDEMPOTENCY_KEY_MISSING", http.StatusBadRequest, Messages{
+		"en": "X-Idempotency-Key header is required",
+		"es": "el encabezado X-Idempotency-Key es obligatorio",
+	})
 }
 
 func ErrIdempotencyKeyTooLong() *AppError {
-	return New("IDEMPOTENCY_KEY_TOO_LONG", http.StatusBadRequest, messages["en"]["IDEMPOTENCY_KEY_TOO_LONG"])
+	return newAppError("IDEMPOTENCY_KEY_TOO_LONG", http.StatusBadRequest, Messages{
+		"en": "X-Idempotency-Key must be at most 64 characters",
+		"es": "X-Idempotency-Key debe tener como maximo 64 caracteres",
+	})
 }
 
 func ErrIdempotencyKeyConflict() *AppError {
-	return New("IDEMPOTENCY_KEY_CONFLICT", http.StatusConflict, messages["en"]["IDEMPOTENCY_KEY_CONFLICT"])
+	return newAppError("IDEMPOTENCY_KEY_CONFLICT", http.StatusConflict, Messages{
+		"en": "idempotency key already used with different request payload",
+		"es": "la clave de idempotencia ya fue utilizada con un payload diferente",
+	})
 }
 
 func ErrPaymentProcessing() *AppError {
-	return New("PAYMENT_PROCESSING", http.StatusConflict, messages["en"]["PAYMENT_PROCESSING"])
+	return newAppError("PAYMENT_PROCESSING", http.StatusConflict, Messages{
+		"en": "a payment with this idempotency key is currently being processed",
+		"es": "un pago con esta clave de idempotencia esta siendo procesado actualmente",
+	})
 }
 
 func ErrPaymentNotFound() *AppError {
-	return New("PAYMENT_NOT_FOUND", http.StatusNotFound, messages["en"]["PAYMENT_NOT_FOUND"])
+	return newAppError("PAYMENT_NOT_FOUND", http.StatusNotFound, Messages{
+		"en": "payment not found",
+		"es": "pago no encontrado",
+	})
 }
 
 func ErrIdempotencyKeyNotFound() *AppError {
-	return New("IDEMPOTENCY_KEY_NOT_FOUND", http.StatusNotFound, messages["en"]["IDEMPOTENCY_KEY_NOT_FOUND"])
+	return newAppError("IDEMPOTENCY_KEY_NOT_FOUND", http.StatusNotFound, Messages{
+		"en": "idempotency key not found",
+		"es": "clave de idempotencia no encontrada",
+	})
 }
 
 func ErrInvalidPaymentRequest(detail string) *AppError {
-	return New("INVALID_PAYMENT_REQUEST", http.StatusBadRequest, fmt.Sprintf("%s: %s", messages["en"]["INVALID_PAYMENT_REQUEST"], detail))
+	return newAppError("INVALID_PAYMENT_REQUEST", http.StatusBadRequest, Messages{
+		"en": fmt.Sprintf("invalid payment request: %s", detail),
+		"es": fmt.Sprintf("solicitud de pago invalida: %s", detail),
+	})
 }
 
 func ErrInvalidCurrency(currency string) *AppError {
-	return New("INVALID_CURRENCY", http.StatusBadRequest, fmt.Sprintf("%s: %s", messages["en"]["INVALID_CURRENCY"], currency))
+	return newAppError("INVALID_CURRENCY", http.StatusBadRequest, Messages{
+		"en": fmt.Sprintf("currency is not supported; valid currencies: IDR, THB, VND, PHP: %s", currency),
+		"es": fmt.Sprintf("moneda no soportada; monedas validas: IDR, THB, VND, PHP: %s", currency),
+	})
 }
 
 func ErrInternal() *AppError {
-	return New("INTERNAL_ERROR", http.StatusInternalServerError, messages["en"]["INTERNAL_ERROR"])
+	return newAppError("INTERNAL_ERROR", http.StatusInternalServerError, Messages{
+		"en": "an internal error occurred",
+		"es": "ocurrio un error interno",
+	})
 }

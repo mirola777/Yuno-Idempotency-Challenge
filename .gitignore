@@ -13,3 +13,4 @@ vendor/
 *.swo
 *~
 tmp/
+.air.toml.local

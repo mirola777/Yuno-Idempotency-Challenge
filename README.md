@@ -28,12 +28,43 @@ See [docs/architecture.md](docs/architecture.md) for details.
 - Go 1.24+
 - Docker and Docker Compose
 - PostgreSQL 16 (provided via Docker Compose)
+- Air (optional, for local hot reload in development)
 
 ### Setup
 
 ```bash
 cp .env.example .env
-docker-compose up -d
+```
+
+The application supports three environment modes controlled by the `APP_ENV` variable: `dev` (default), `test`, and `prod`. See the [Environments](#environments) section for details.
+
+**Development with Docker (hot reload):**
+
+```bash
+docker compose --profile dev up --build
+```
+
+This starts PostgreSQL and the application with Air hot reload. Source code is volume-mounted, so changes are picked up automatically.
+
+**Production with Docker:**
+
+```bash
+docker compose --profile prod up --build
+```
+
+This builds an optimized binary and runs it in a minimal Alpine container.
+
+**Local development (database only in Docker):**
+
+```bash
+docker compose up -d
+air
+```
+
+Or without Air:
+
+```bash
+docker compose up -d
 go run main.go
 ```
 
@@ -50,6 +81,56 @@ export DB_USER=your-user
 export DB_PASSWORD=your-password
 export DB_NAME=your-db
 go run main.go
+```
+
+## Environments
+
+The `APP_ENV` variable controls the application environment. It accepts three values:
+
+| Value | Description |
+|---|---|
+| `dev` | Development mode (default). Used for local development with verbose output. |
+| `test` | Test mode. Used when running the test suite. |
+| `prod` | Production mode. Used for deployed environments with optimized settings. |
+
+The configuration provides helper methods `IsDev()`, `IsProd()`, and `IsTest()` for environment-specific branching in application code.
+
+### Running in Each Environment
+
+**Development:**
+
+```bash
+APP_ENV=dev go run main.go
+```
+
+Or with Air for hot reload:
+
+```bash
+APP_ENV=dev air
+```
+
+Or fully containerized:
+
+```bash
+docker compose --profile dev up --build
+```
+
+**Production:**
+
+```bash
+APP_ENV=prod go run main.go
+```
+
+Or containerized with the optimized binary:
+
+```bash
+docker compose --profile prod up --build
+```
+
+**Tests:**
+
+```bash
+APP_ENV=test go test ./...
 ```
 
 ## API Endpoints
@@ -91,7 +172,7 @@ See [docs/concurrency.md](docs/concurrency.md) for the concurrency strategy.
 ### Unit Tests
 
 ```bash
-go test ./...
+APP_ENV=test go test ./...
 ```
 
 ### Postman Collection
@@ -119,6 +200,7 @@ Demonstrates: payment creation, idempotent retries, conflict detection, failed/p
 
 | Variable | Default | Description |
 |---|---|---|
+| APP_ENV | dev | Application environment: `dev`, `test`, or `prod` |
 | APP_PORT | 8080 | HTTP server port |
 | DB_HOST | localhost | PostgreSQL host |
 | DB_PORT | 5432 | PostgreSQL port |
@@ -134,35 +216,75 @@ Configuration loads from `.env` file first, falls back to OS environment variabl
 
 See [docs/infrastructure.md](docs/infrastructure.md) for infrastructure details.
 
+## Docker
+
+### Multi-Stage Dockerfile
+
+The Dockerfile uses a multi-stage build with three stages:
+
+| Stage | Purpose |
+|---|---|
+| `base` | Downloads Go dependencies and copies source code |
+| `dev` | Installs Air and runs with hot reload |
+| `prod` | Builds an optimized static binary and runs in a minimal Alpine image |
+
+### Docker Compose Profiles
+
+The `docker-compose.yml` defines two application profiles alongside a shared PostgreSQL service:
+
+**Dev profile** (`docker compose --profile dev up`):
+- Builds from the `dev` Dockerfile stage
+- Mounts the project directory as a volume for live code changes
+- Runs Air for automatic rebuilds on file changes
+- Sets `APP_ENV=dev`
+
+**Prod profile** (`docker compose --profile prod up`):
+- Builds from the `prod` Dockerfile stage
+- Produces a small container with only the compiled binary
+- Sets `APP_ENV=prod` and `restart: unless-stopped`
+
+Running `docker compose up -d` without a profile starts only the PostgreSQL database, which is useful for local development with `go run` or `air`.
+
 ## Project Structure
 
 ```
+.air.toml                 Air hot reload configuration
+Dockerfile                Multi-stage build (dev with Air, prod optimized)
+docker-compose.yml        PostgreSQL + app profiles (dev, prod)
+main.go                   Entry point (config, container, server -- no DB imports)
 internal/
-  application/payment/
-    container.go          DI wiring
-    service.go            Idempotency engine
-    service_test.go       Unit tests
+  application/use_cases/
+    container.go          DI wiring, DB connection, migrations
+    create_payment.go     Idempotency engine
+    get_payment.go        Payment retrieval
+    get_by_idempotency_key.go  Key lookup
+    create_payment_test.go     Unit tests
   domain/
     models.go             Payment, IdempotencyRecord, enums
-    errors.go             Domain errors with HTTP codes
-    ports.go              Repository, Processor, Service interfaces
+    errors/
+      base.go             AppError with Messages map and Localize(lang)
+      payment.go          Error factories with embedded translations
+    ports.go              Repository, Processor interfaces
   infrastructure/
-    database/
-      connection.go       GORM PostgreSQL setup
-      migrations.go       AutoMigrate
+    gorm/
+      connection.go       GORM PostgreSQL setup (package gormdb)
+      migrations.go       Migration runner
+      migrations/         Schema migration definitions
       repositories/       IdempotencyRepo, PaymentRepo
+      testdb.go           Test database helpers
     processor/
       simulator.go        Simulated payment processor
   presentation/echo/
-    server.go             Echo setup, graceful shutdown
+    server.go             Echo setup, route wiring, graceful shutdown
     routing.go            Route registration
-    errorhandler.go       AppError to JSON mapping
+    errorhandler.go       AppError to JSON mapping with localization
     middleware/            TraceID, Recovery, Logger
     handlers/             PaymentHandler, HealthHandler
-utils/
-  config/                 .env loader with defaults
-  fingerprint/            SHA256 request hashing
+  utils/
+    config/               Environment-aware config with .env loader (APP_ENV support)
+    fingerprint/          SHA256 request hashing
 docs/                     Architecture, API, concurrency, infrastructure docs
 tests/postman/            Postman collection and environment
 tests/scripts/            Demo shell script
+tests/integration/        Integration tests
 ```

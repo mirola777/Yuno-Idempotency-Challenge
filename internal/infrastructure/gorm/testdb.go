@@ -1,4 +1,4 @@
-package database
+package gormdb
 
 import (
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/domain"

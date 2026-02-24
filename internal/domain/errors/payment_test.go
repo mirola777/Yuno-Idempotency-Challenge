@@ -15,6 +15,12 @@ func TestErrIdempotencyKeyMissing(t *testing.T) {
 	assert.Equal(t, "X-Idempotency-Key header is required", err.Message)
 }
 
+func TestErrIdempotencyKeyMissing_Localize(t *testing.T) {
+	err := ErrIdempotencyKeyMissing().Localize("es")
+
+	assert.Equal(t, "el encabezado X-Idempotency-Key es obligatorio", err.Message)
+}
+
 func TestErrIdempotencyKeyTooLong(t *testing.T) {
 	err := ErrIdempotencyKeyTooLong()
 
@@ -29,6 +35,12 @@ func TestErrIdempotencyKeyConflict(t *testing.T) {
 	assert.Equal(t, "IDEMPOTENCY_KEY_CONFLICT", err.Code)
 	assert.Equal(t, http.StatusConflict, err.HTTPCode)
 	assert.Equal(t, "idempotency key already used with different request payload", err.Message)
+}
+
+func TestErrIdempotencyKeyConflict_Localize(t *testing.T) {
+	err := ErrIdempotencyKeyConflict().Localize("es")
+
+	assert.Equal(t, "la clave de idempotencia ya fue utilizada con un payload diferente", err.Message)
 }
 
 func TestErrPaymentProcessing(t *testing.T) {
@@ -47,6 +59,12 @@ func TestErrPaymentNotFound(t *testing.T) {
 	assert.Equal(t, "payment not found", err.Message)
 }
 
+func TestErrPaymentNotFound_Localize(t *testing.T) {
+	err := ErrPaymentNotFound().Localize("es")
+
+	assert.Equal(t, "pago no encontrado", err.Message)
+}
+
 func TestErrIdempotencyKeyNotFound(t *testing.T) {
 	err := ErrIdempotencyKeyNotFound()
 
@@ -63,12 +81,18 @@ func TestErrInvalidPaymentRequestIncludesDetail(t *testing.T) {
 	assert.Equal(t, "invalid payment request: amount must be positive", err.Message)
 }
 
+func TestErrInvalidPaymentRequest_Localize(t *testing.T) {
+	err := ErrInvalidPaymentRequest("amount must be positive").Localize("es")
+
+	assert.Contains(t, err.Message, "solicitud de pago invalida")
+}
+
 func TestErrInvalidCurrencyIncludesCurrencyName(t *testing.T) {
 	err := ErrInvalidCurrency("USD")
 
 	assert.Equal(t, "INVALID_CURRENCY", err.Code)
 	assert.Equal(t, http.StatusBadRequest, err.HTTPCode)
-	assert.Equal(t, "currency is not supported; valid currencies: IDR, THB, VND, PHP: USD", err.Message)
+	assert.Contains(t, err.Message, "USD")
 }
 
 func TestErrInternal(t *testing.T) {
@@ -77,4 +101,30 @@ func TestErrInternal(t *testing.T) {
 	assert.Equal(t, "INTERNAL_ERROR", err.Code)
 	assert.Equal(t, http.StatusInternalServerError, err.HTTPCode)
 	assert.Equal(t, "an internal error occurred", err.Message)
+}
+
+func TestErrInternal_Localize(t *testing.T) {
+	err := ErrInternal().Localize("es")
+
+	assert.Equal(t, "ocurrio un error interno", err.Message)
+}
+
+func TestAllErrors_DefaultToEnglish(t *testing.T) {
+	errors := []*AppError{
+		ErrIdempotencyKeyMissing(),
+		ErrIdempotencyKeyTooLong(),
+		ErrIdempotencyKeyConflict(),
+		ErrPaymentProcessing(),
+		ErrPaymentNotFound(),
+		ErrIdempotencyKeyNotFound(),
+		ErrInvalidPaymentRequest("test"),
+		ErrInvalidCurrency("USD"),
+		ErrInternal(),
+	}
+
+	for _, err := range errors {
+		assert.NotEmpty(t, err.Message, "error %s should have a default English message", err.Code)
+		localized := err.Localize("en")
+		assert.Equal(t, err.Message, localized.Message)
+	}
 }

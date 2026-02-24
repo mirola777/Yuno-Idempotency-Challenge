@@ -9,6 +9,7 @@ import (
 	"syscall"
 
 	echofw "github.com/labstack/echo/v4"
+	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/application/use_cases"
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/utils/config"
 )
 
@@ -17,19 +18,17 @@ type Server struct {
 	config *config.Config
 }
 
-func NewServer(cfg *config.Config) *Server {
+func NewServer(cfg *config.Config, container *use_cases.Container) *Server {
 	e := echofw.New()
 	e.HideBanner = true
 	e.HTTPErrorHandler = CustomHTTPErrorHandler
+
+	ConfigureRoutes(e, container)
 
 	return &Server{
 		echo:   e,
 		config: cfg,
 	}
-}
-
-func (s *Server) Echo() *echofw.Echo {
-	return s.echo
 }
 
 func (s *Server) Start() <-chan error {

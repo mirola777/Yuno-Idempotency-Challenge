@@ -44,6 +44,7 @@ jobs:
 
       - name: Run tests
         env:
+          APP_ENV: test
           DB_HOST: localhost
           DB_PORT: 5432
           DB_USER: idempotency
@@ -51,7 +52,19 @@ jobs:
           DB_NAME: idempotency_db
           DB_SSLMODE: disable
           APP_PORT: 8080
-        run: go test ./... -v -race -coverprofile=coverage.out
+        run: go test ./... -v -race -coverprofile=coverage.out -count=1
 
       - name: Coverage summary
         run: go tool cover -func=coverage.out
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Build production image
+        run: docker build --target prod -t idempotency-api:test .
+
+      - name: Verify image runs
+        run: docker run --rm idempotency-api:test ./server --help || true

@@ -20,5 +20,42 @@ services:
       timeout: 5s
       retries: 5
 
+  app-dev:
+    build:
+      context: .
+      target: dev
+    container_name: idempotency-app-dev
+    profiles: ["dev"]
+    env_file:
+      - .env
+    environment:
+      APP_ENV: dev
+      DB_HOST: postgres
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    volumes:
+      - .:/app
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app-prod:
+    build:
+      context: .
+      target: prod
+    container_name: idempotency-app-prod
+    profiles: ["prod"]
+    env_file:
+      - .env
+    environment:
+      APP_ENV: prod
+      DB_HOST: postgres
+    ports:
+      - "${APP_PORT:-8080}:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
 volumes:
   pgdata:

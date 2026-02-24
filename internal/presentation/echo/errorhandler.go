@@ -16,7 +16,7 @@ func CustomHTTPErrorHandler(err error, c echofw.Context) {
 	lang := parseAcceptLanguage(c.Request().Header.Get("Accept-Language"))
 
 	if appErr, ok := err.(*apperrors.AppError); ok {
-		localized := apperrors.Localize(appErr, lang)
+		localized := appErr.Localize(lang)
 		_ = c.JSON(localized.HTTPCode, map[string]interface{}{
 			"code":    localized.Code,
 			"message": localized.Message,
@@ -32,10 +32,10 @@ func CustomHTTPErrorHandler(err error, c echofw.Context) {
 		return
 	}
 
-	msg := apperrors.GetMessage("INTERNAL_ERROR", lang)
+	internalErr := apperrors.ErrInternal().Localize(lang)
 	_ = c.JSON(http.StatusInternalServerError, map[string]interface{}{
-		"code":    "INTERNAL_ERROR",
-		"message": msg,
+		"code":    internalErr.Code,
+		"message": internalErr.Message,
 	})
 }
 
