@@ -287,7 +287,7 @@ This creates two tables:
 
 ### Connection Pool
 
-The database connection is configured with the following pool settings in `database/connection.go`:
+The database connection is configured with the following pool settings in `gorm/connection.go` (package `gormdb`):
 
 | Setting           | Value    | Description                                          |
 |-------------------|----------|------------------------------------------------------|
