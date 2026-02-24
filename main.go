@@ -4,10 +4,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/application/payment"
+	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/application/use_cases"
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/infrastructure/database"
 	echoserver "github.com/mirola777/Yuno-Idempotency-Challenge/internal/presentation/echo"
-	"github.com/mirola777/Yuno-Idempotency-Challenge/utils/config"
+	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/utils/config"
 )
 
 func main() {
@@ -24,10 +24,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	container := payment.NewContainer(db, cfg)
+	container := use_cases.NewContainer(db, cfg)
 
 	server := echoserver.NewServer(cfg)
-	echoserver.ConfigureRoutes(server.Echo(), container.PaymentService)
+	echoserver.ConfigureRoutes(server.Echo(), container)
 
 	errC := server.Start()
 	if err := <-errC; err != nil {

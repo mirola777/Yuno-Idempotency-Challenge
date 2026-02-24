@@ -9,7 +9,7 @@ import (
 	"syscall"
 
 	echofw "github.com/labstack/echo/v4"
-	"github.com/mirola777/Yuno-Idempotency-Challenge/utils/config"
+	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/utils/config"
 )
 
 type Server struct {

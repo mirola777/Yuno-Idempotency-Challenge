@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/mirola777/Yuno-Idempotency-Challenge/utils/config"
+	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/utils/config"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"

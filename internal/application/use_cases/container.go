@@ -1,4 +1,4 @@
-package payment
+package use_cases
 
 import (
 	"context"
@@ -8,12 +8,14 @@ import (
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/domain"
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/infrastructure/database/repositories"
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/infrastructure/processor"
-	"github.com/mirola777/Yuno-Idempotency-Challenge/utils/config"
+	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/utils/config"
 	"gorm.io/gorm"
 )
 
 type Container struct {
-	PaymentService domain.PaymentService
+	CreatePayment       *CreatePaymentUseCase
+	GetPayment          *GetPaymentUseCase
+	GetByIdempotencyKey *GetByIdempotencyKeyUseCase
 }
 
 func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
@@ -21,18 +23,16 @@ func NewContainer(db *gorm.DB, cfg *config.Config) *Container {
 	paymentRepo := repositories.NewPaymentRepo(db)
 	paymentProcessor := processor.NewSimulator()
 
-	paymentService := NewService(
-		db,
-		idempotencyRepo,
-		paymentRepo,
-		paymentProcessor,
-		cfg.IdempotencyKeyTTL,
-	)
+	createPayment := NewCreatePaymentUseCase(db, idempotencyRepo, paymentRepo, paymentProcessor, cfg.IdempotencyKeyTTL)
+	getPayment := NewGetPaymentUseCase(paymentRepo)
+	getByIdempotencyKey := NewGetByIdempotencyKeyUseCase(idempotencyRepo)
 
 	go startCleanupLoop(idempotencyRepo, cfg.CleanupInterval)
 
 	return &Container{
-		PaymentService: paymentService,
+		CreatePayment:       createPayment,
+		GetPayment:          getPayment,
+		GetByIdempotencyKey: getByIdempotencyKey,
 	}
 }
 

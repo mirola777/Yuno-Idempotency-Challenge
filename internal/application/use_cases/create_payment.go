@@ -1,4 +1,4 @@
-package payment
+package use_cases
 
 import (
 	"context"
@@ -6,11 +6,12 @@ import (
 	"time"
 
 	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/domain"
-	"github.com/mirola777/Yuno-Idempotency-Challenge/utils/fingerprint"
+	apperrors "github.com/mirola777/Yuno-Idempotency-Challenge/internal/domain/errors"
+	"github.com/mirola777/Yuno-Idempotency-Challenge/internal/utils/fingerprint"
 	"gorm.io/gorm"
 )
 
-type service struct {
+type CreatePaymentUseCase struct {
 	db              *gorm.DB
 	idempotencyRepo domain.IdempotencyRepository
 	paymentRepo     domain.PaymentRepository
@@ -18,14 +19,14 @@ type service struct {
 	keyTTL          time.Duration
 }
 
-func NewService(
+func NewCreatePaymentUseCase(
 	db *gorm.DB,
 	idempotencyRepo domain.IdempotencyRepository,
 	paymentRepo domain.PaymentRepository,
 	processor domain.PaymentProcessor,
 	keyTTL time.Duration,
-) domain.PaymentService {
-	return &service{
+) *CreatePaymentUseCase {
+	return &CreatePaymentUseCase{
 		db:              db,
 		idempotencyRepo: idempotencyRepo,
 		paymentRepo:     paymentRepo,
@@ -34,7 +35,7 @@ func NewService(
 	}
 }
 
-func (s *service) CreatePayment(ctx context.Context, idempotencyKey string, req domain.PaymentRequest) (*domain.Payment, error) {
+func (uc *CreatePaymentUseCase) Execute(ctx context.Context, idempotencyKey string, req domain.PaymentRequest) (*domain.Payment, error) {
 	if err := validateIdempotencyKey(idempotencyKey); err != nil {
 		return nil, err
 	}
@@ -48,27 +49,27 @@ func (s *service) CreatePayment(ctx context.Context, idempotencyKey string, req 
 	var result *domain.Payment
 	var returnErr error
 
-	txErr := s.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
-		record, err := s.idempotencyRepo.FindByKeyForUpdate(ctx, tx, idempotencyKey)
+	txErr := uc.db.WithContext(ctx).Transaction(func(tx *gorm.DB) error {
+		record, err := uc.idempotencyRepo.FindByKeyForUpdate(ctx, tx, idempotencyKey)
 		if err != nil {
-			returnErr = domain.ErrInternal("failed to check idempotency key")
+			returnErr = apperrors.ErrInternal()
 			return err
 		}
 
 		if record != nil {
 			if record.Status == domain.IdempotencyStatusProcessing {
-				returnErr = domain.ErrPaymentProcessing()
+				returnErr = apperrors.ErrPaymentProcessing()
 				return returnErr
 			}
 
 			if record.RequestFingerprint != fp {
-				returnErr = domain.ErrIdempotencyKeyConflict(idempotencyKey)
+				returnErr = apperrors.ErrIdempotencyKeyConflict()
 				return returnErr
 			}
 
 			var cached domain.Payment
 			if err := json.Unmarshal(record.ResponseBody, &cached); err != nil {
-				returnErr = domain.ErrInternal("failed to deserialize cached response")
+				returnErr = apperrors.ErrInternal()
 				return err
 			}
 			result = &cached
@@ -80,35 +81,35 @@ func (s *service) CreatePayment(ctx context.Context, idempotencyKey string, req 
 			RequestFingerprint: fp,
 			Status:             domain.IdempotencyStatusProcessing,
 			CreatedAt:          time.Now(),
-			ExpiresAt:          time.Now().Add(s.keyTTL),
+			ExpiresAt:          time.Now().Add(uc.keyTTL),
 		}
-		if err := s.idempotencyRepo.CreateInTx(ctx, tx, newRecord); err != nil {
-			returnErr = domain.ErrInternal("failed to create idempotency record")
+		if err := uc.idempotencyRepo.CreateInTx(ctx, tx, newRecord); err != nil {
+			returnErr = apperrors.ErrInternal()
 			return err
 		}
 
-		payment, err := s.processor.Process(ctx, req)
+		payment, err := uc.processor.Process(ctx, req)
 		if err != nil {
-			returnErr = domain.ErrInternal("payment processing failed")
+			returnErr = apperrors.ErrInternal()
 			return err
 		}
 
-		if err := s.paymentRepo.CreateInTx(ctx, tx, payment); err != nil {
-			returnErr = domain.ErrInternal("failed to save payment")
+		if err := uc.paymentRepo.CreateInTx(ctx, tx, payment); err != nil {
+			returnErr = apperrors.ErrInternal()
 			return err
 		}
 
 		responseBody, err := json.Marshal(payment)
 		if err != nil {
-			returnErr = domain.ErrInternal("failed to serialize payment response")
+			returnErr = apperrors.ErrInternal()
 			return err
 		}
 
 		newRecord.Status = domain.IdempotencyStatusCompleted
 		newRecord.PaymentID = payment.ID
 		newRecord.ResponseBody = responseBody
-		if err := s.idempotencyRepo.UpdateInTx(ctx, tx, newRecord); err != nil {
-			returnErr = domain.ErrInternal("failed to update idempotency record")
+		if err := uc.idempotencyRepo.UpdateInTx(ctx, tx, newRecord); err != nil {
+			returnErr = apperrors.ErrInternal()
 			return err
 		}
 
@@ -120,40 +121,18 @@ func (s *service) CreatePayment(ctx context.Context, idempotencyKey string, req 
 		return nil, returnErr
 	}
 	if txErr != nil {
-		return nil, domain.ErrInternal("transaction failed")
+		return nil, apperrors.ErrInternal()
 	}
 
 	return result, nil
 }
 
-func (s *service) GetPayment(ctx context.Context, paymentID string) (*domain.Payment, error) {
-	payment, err := s.paymentRepo.FindByID(ctx, paymentID)
-	if err != nil {
-		return nil, domain.ErrInternal("failed to retrieve payment")
-	}
-	if payment == nil {
-		return nil, domain.ErrPaymentNotFound(paymentID)
-	}
-	return payment, nil
-}
-
-func (s *service) GetByIdempotencyKey(ctx context.Context, key string) (*domain.IdempotencyRecord, error) {
-	record, err := s.idempotencyRepo.FindByKey(ctx, key)
-	if err != nil {
-		return nil, domain.ErrInternal("failed to retrieve idempotency record")
-	}
-	if record == nil {
-		return nil, domain.ErrIdempotencyKeyNotFound(key)
-	}
-	return record, nil
-}
-
 func validateIdempotencyKey(key string) error {
 	if key == "" {
-		return domain.ErrIdempotencyKeyMissing()
+		return apperrors.ErrIdempotencyKeyMissing()
 	}
 	if len(key) > 64 {
-		return domain.ErrIdempotencyKeyTooLong()
+		return apperrors.ErrIdempotencyKeyTooLong()
 	}
 	return nil
 }
@@ -167,7 +146,7 @@ func validatePaymentRequest(req domain.PaymentRequest) error {
 	if req.Currency == "" {
 		reasons = append(reasons, "currency is required")
 	} else if !domain.ValidCurrencies[req.Currency] {
-		return domain.ErrInvalidCurrency(string(req.Currency))
+		return apperrors.ErrInvalidCurrency(string(req.Currency))
 	}
 	if req.CustomerID == "" {
 		reasons = append(reasons, "customer_id is required")
@@ -180,7 +159,7 @@ func validatePaymentRequest(req domain.PaymentRequest) error {
 	}
 
 	if len(reasons) > 0 {
-		return domain.ErrInvalidPaymentRequest(reasons)
+		return apperrors.ErrInvalidPaymentRequest(reasons[0])
 	}
 	return nil
 }
