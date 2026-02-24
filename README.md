@@ -109,8 +109,8 @@ The collection contains 26 requests across 8 folders covering all acceptance cri
 ### Demo Script
 
 ```bash
-chmod +x scripts/demo.sh
-./scripts/demo.sh
+chmod +x tests/scripts/demo.sh
+./tests/scripts/demo.sh
 ```
 
 Demonstrates: payment creation, idempotent retries, conflict detection, failed/pending payments, lookups, validation errors, and concurrent request handling.
@@ -164,5 +164,5 @@ utils/
   fingerprint/            SHA256 request hashing
 docs/                     Architecture, API, concurrency, infrastructure docs
 tests/postman/            Postman collection and environment
-scripts/                  Demo shell script
+tests/scripts/            Demo shell script
 ```
